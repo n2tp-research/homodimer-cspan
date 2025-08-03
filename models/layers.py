@@ -224,6 +224,7 @@ class GlobalFeatureExtractor(nn.Module):
             self.qkv_proj = nn.Linear(d_model, 3 * d_model)
             self.out_proj = nn.Linear(d_model, d_model)
             self.attn_dropout = dropout
+            self.dropout_p = dropout
         
         # Feed-forward network
         self.ffn = nn.Sequential(
@@ -322,6 +323,11 @@ class GlobalFeatureExtractor(nn.Module):
                        three=3, h=self.num_heads)
         q, k, v = qkv.unbind(dim=2)
         
+        # Ensure q, k, v are in fp16
+        q = q.half() if q.dtype not in [torch.float16, torch.bfloat16] else q
+        k = k.half() if k.dtype not in [torch.float16, torch.bfloat16] else k
+        v = v.half() if v.dtype not in [torch.float16, torch.bfloat16] else v
+        
         # Apply RoPE if enabled
         if self.use_rope:
             q = rearrange(q, 'b s h d -> b h s d')
@@ -342,11 +348,12 @@ class GlobalFeatureExtractor(nn.Module):
         
         # Reshape and project output
         attn_output = rearrange(attn_output, 'b s h d -> b s (h d)')
-        attn_output = self.out_proj(attn_output)
         
-        # Convert back to original dtype if needed
-        if dtype_orig not in [torch.float16, torch.bfloat16]:
+        # Convert back to original dtype before projection if needed
+        if attn_output.dtype != dtype_orig:
             attn_output = attn_output.to(dtype_orig)
+            
+        attn_output = self.out_proj(attn_output)
         
         return attn_output
     

@@ -5,7 +5,8 @@ Training script for CSPAN homodimerization prediction model.
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import GradScaler, autocast
+from torch.cuda.amp import GradScaler
+from torch.amp import autocast
 import numpy as np
 from tqdm import tqdm
 import yaml
@@ -217,7 +218,7 @@ class Trainer:
             
             # Forward pass with mixed precision
             if self.use_amp:
-                with autocast():
+                with autocast(device_type='cuda', dtype=torch.float16):
                     outputs = self.model(features, attention_mask)
                     losses = self.criterion(
                         outputs['logits'],

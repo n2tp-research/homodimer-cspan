@@ -5,7 +5,8 @@ Advanced training script with curriculum learning, auxiliary MLM, and hard negat
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import GradScaler, autocast
+from torch.cuda.amp import GradScaler
+from torch.amp import autocast
 import numpy as np
 from tqdm import tqdm
 import yaml
@@ -299,7 +300,7 @@ class AdvancedTrainer(Trainer):
             
             # Forward pass with mixed precision
             if self.use_amp:
-                with autocast():
+                with autocast(device_type='cuda', dtype=torch.float16):
                     outputs = self.model(features, attention_mask)
                     
                     # Prepare loss inputs
