@@ -387,7 +387,7 @@ def train_all_baselines(config_path: str = "config.yml"):
     # Load data
     print("Loading training data...")
     train_dataset = HomodimerDataset('train', config_path)
-    val_dataset = HomodimerDataset('validation', config_path)
+    val_dataset = HomodimerDataset('valid', config_path)
     
     train_sequences = train_dataset.sequences
     train_labels = np.array(train_dataset.labels)

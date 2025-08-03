@@ -124,7 +124,7 @@ class ESM2FeatureExtractor:
         cache.attrs['max_length'] = self.max_length
         
         # Create groups for each dataset split
-        for split in ['train', 'validation', 'test']:
+        for split in ['train', 'valid', 'test']:
             cache.create_group(split)
         
         return cache
@@ -390,7 +390,7 @@ def precompute_all_features(
     extractor = ESM2FeatureExtractor(config_path=config_path, verbose=True)
     
     # Process each split
-    for split in ['train', 'validation', 'test']:
+    for split in ['train', 'valid', 'test']:
         print(f"\n{'='*50}")
         print(f"Processing {split} split")
         print('='*50)

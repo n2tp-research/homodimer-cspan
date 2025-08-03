@@ -275,7 +275,7 @@ def get_dataloaders(
     """
     # Create datasets
     train_dataset = HomodimerDataset('train', config_path)
-    val_dataset = HomodimerDataset('validation', config_path)
+    val_dataset = HomodimerDataset('valid', config_path)  # Dataset uses 'valid' not 'validation'
     test_dataset = HomodimerDataset('test', config_path)
     
     # Get batch size from config if not specified
