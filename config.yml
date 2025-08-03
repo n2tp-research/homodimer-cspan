@@ -76,7 +76,7 @@ training:
     label_smoothing: 0.0
   
   # Gradient clipping
-  gradient_clip_norm: 1.0
+  gradient_clip_norm: 10.0
   
   # Mixed precision
   use_amp: true
