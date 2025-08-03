@@ -103,7 +103,7 @@ data:
   
   # ESM2 processing
   esm_max_length: 1024
-  esm_batch_size: 8
+  esm_batch_size: 32
   
   # Feature caching
   feature_cache_file: "./data/esm2_features.h5"
