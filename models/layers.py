@@ -309,6 +309,13 @@ class GlobalFeatureExtractor(nn.Module):
         
         batch_size, seq_len, d_model = x.shape
         
+        # Store original dtype
+        dtype_orig = x.dtype
+        
+        # Convert to fp16 if needed (Flash Attention requirement)
+        if x.dtype not in [torch.float16, torch.bfloat16]:
+            x = x.half()
+        
         # Project to Q, K, V
         qkv = self.qkv_proj(x)
         qkv = rearrange(qkv, 'b s (three h d) -> b s three h d', 
@@ -336,6 +343,10 @@ class GlobalFeatureExtractor(nn.Module):
         # Reshape and project output
         attn_output = rearrange(attn_output, 'b s h d -> b s (h d)')
         attn_output = self.out_proj(attn_output)
+        
+        # Convert back to original dtype if needed
+        if dtype_orig not in [torch.float16, torch.bfloat16]:
+            attn_output = attn_output.to(dtype_orig)
         
         return attn_output
     

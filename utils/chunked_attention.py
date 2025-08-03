@@ -204,6 +204,13 @@ class MemoryEfficientAttention(nn.Module):
         """Flash Attention implementation."""
         from flash_attn import flash_attn_func
         
+        # Flash attention requires fp16 or bf16
+        dtype_orig = q.dtype
+        if q.dtype not in [torch.float16, torch.bfloat16]:
+            q = q.half()
+            k = k.half()
+            v = v.half()
+        
         # Flash attention expects (batch, seqlen, nheads, headdim)
         attn_output = flash_attn_func(
             q, k, v,
@@ -211,6 +218,10 @@ class MemoryEfficientAttention(nn.Module):
             causal=False,
             return_attn_probs=False
         )
+        
+        # Convert back to original dtype if needed
+        if dtype_orig not in [torch.float16, torch.bfloat16]:
+            attn_output = attn_output.to(dtype_orig)
         
         return attn_output
     

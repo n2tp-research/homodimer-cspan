@@ -57,6 +57,10 @@ def benchmark_attention(
         x = torch.randn(batch_size, seq_len, d_model, device=device)
         mask = torch.ones(batch_size, seq_len, device=device)
         
+        # Create fp16 versions for flash attention
+        x_fp16 = x.half()
+        mask_fp16 = mask.half()
+        
         # Test standard attention
         print("  Testing standard attention...")
         try:
@@ -102,18 +106,18 @@ def benchmark_attention(
                     d_model=d_model,
                     num_heads=num_heads,
                     attention_mode='flash'
-                ).to(device)
+                ).to(device).half()  # Flash attention requires fp16
                 
                 # Warmup
                 for _ in range(3):
-                    _ = attn(x, mask)[0]
+                    _ = attn(x_fp16, mask_fp16)[0]
                 
                 # Time it
                 torch.cuda.synchronize()
                 start_time = time.time()
                 
                 for _ in range(num_runs):
-                    _ = attn(x, mask)[0]
+                    _ = attn(x_fp16, mask_fp16)[0]
                 
                 torch.cuda.synchronize()
                 elapsed = (time.time() - start_time) / num_runs
@@ -214,7 +218,7 @@ def benchmark_attention(
 def plot_results(results: Dict, seq_lengths: List[int], output_dir: str = "results"):
     """Plot benchmark results."""
     output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # Time comparison
     plt.figure(figsize=(10, 6))
