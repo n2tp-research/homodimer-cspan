@@ -1,0 +1,289 @@
+# CSPAN Configuration File for Protein Homodimerization Prediction
+
+# Model Architecture Parameters
+model:
+  name: "CSPAN"
+  esm_model: "facebook/esm2_t33_650M_UR50D"
+  esm_dim: 1280
+  hidden_dim: 512
+  num_motifs: 32
+  num_heads: 8
+  dropout: 0.3
+  activation: "relu"
+  
+  # Multi-scale feature extraction
+  local_features:
+    conv_filters: 256
+    kernel_sizes: [3, 5, 7, 9]
+    padding: "same"
+  
+  regional_features:
+    conv_filters: 256
+    kernel_size: 3
+    dilation_rates: [2, 4, 8, 16]
+  
+  global_features:
+    d_model: 512
+    num_heads: 8
+    attention_dropout: 0.1
+    use_flash_attention: true  # Enable Flash Attention if available
+  
+  # Cross-scale attention
+  cross_scale:
+    d_model: 512
+    residual_connection: true
+  
+  # Hierarchical aggregation
+  aggregation:
+    window_size: 64
+    stride: 32
+    include_std_pool: true
+
+# Training Configuration
+training:
+  # Batch settings
+  batch_size: 16
+  gradient_accumulation_steps: 4
+  effective_batch_size: 64  # batch_size * accumulation_steps
+  
+  # Optimizer
+  optimizer: "AdamW"
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1.0e-8
+  
+  # Learning rate schedule
+  scheduler: "cosine_with_restarts"
+  warmup_steps: 2000
+  cosine_cycles: 10
+  min_learning_rate: 1.0e-6
+  restart_decay: 0.9
+  
+  # Training duration
+  max_epochs: 100
+  early_stopping_patience: 15
+  early_stopping_metric: "val_auprc"
+  early_stopping_mode: "max"
+  
+  # Loss function
+  loss:
+    focal_loss_alpha: 0.1  # Weight for positive class
+    focal_loss_gamma: 2.0
+    auxiliary_loss_weight: 0.1
+    regularization_weight: 1.0e-4
+    label_smoothing: 0.0
+  
+  # Gradient clipping
+  gradient_clip_norm: 1.0
+  
+  # Mixed precision
+  use_amp: true
+  amp_opt_level: "O2"
+  
+  # Curriculum learning
+  curriculum:
+    enabled: true
+    initial_max_length: 500
+    length_increment: 100
+    increment_epochs: 5
+
+# Data Configuration
+data:
+  # Dataset
+  dataset_name: "Synthyra/homodimer_benchmark"
+  cache_dir: "./data/cache"
+  
+  # Sequence filtering
+  min_seq_length: 50
+  max_seq_length: 5000
+  max_unknown_ratio: 0.05
+  valid_amino_acids: "ACDEFGHIKLMNPQRSTVWY"
+  
+  # ESM2 processing
+  esm_max_length: 1024
+  esm_batch_size: 8
+  
+  # Feature caching
+  feature_cache_file: "./data/esm2_features.h5"
+  use_feature_cache: true
+  compression: "gzip"
+  compression_level: 4
+  
+  # Data augmentation (training only)
+  augmentation:
+    add_noise: true
+    noise_std: 0.05
+    mask_prob: 0.15  # For auxiliary task
+  
+  # Dataloader settings
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
+  
+  # Class weights (computed from dataset or specified)
+  compute_class_weights: true
+  # class_weights: [1.0, 9.0]  # Uncomment to manually specify
+
+# Evaluation Configuration
+evaluation:
+  # Metrics
+  primary_metric: "auprc"
+  metrics:
+    - "auprc"
+    - "mcc"
+    - "f1_optimal"
+    - "balanced_accuracy"
+    - "precision_at_k"
+    - "calibration_error"
+  
+  # Precision@k settings
+  precision_k_values: [5, 10, 20]
+  
+  # Calibration
+  calibration_bins: 10
+  
+  # Statistical testing
+  use_statistical_tests: true
+  significance_level: 0.05
+  multiple_comparison_correction: "benjamini_hochberg"
+  
+  # Stratified evaluation
+  stratify_by:
+    - "sequence_length"
+    - "protein_family"
+  
+  length_bins:
+    short: [0, 200]
+    medium: [200, 500]
+    long: [500, 1000]
+    extra_long: [1000, 5000]
+
+# Experiment Configuration
+experiment:
+  # Reproducibility
+  seed: 42
+  deterministic: true
+  
+  # Experiment tracking
+  use_wandb: true
+  wandb_project: "homodimer-cspan"
+  wandb_entity: null  # Set your wandb entity
+  
+  # Logging
+  log_interval: 100
+  val_interval: 1000
+  save_interval: 5000
+  
+  # Checkpointing
+  checkpoint_dir: "./models/checkpoints"
+  keep_best_k: 3
+  save_last: true
+  
+  # Model saving
+  save_predictions: true
+  save_attention_weights: false
+  
+  # Ablation studies
+  ablations:
+    - "full"
+    - "no_cross_scale"
+    - "no_motif"
+    - "single_scale"
+    - "esm2_baseline"
+
+# Inference Configuration
+inference:
+  # Batch processing
+  inference_batch_size: 32
+  
+  # Output
+  output_probabilities: true
+  output_attention_scores: false
+  confidence_threshold: 0.5
+  
+  # Performance
+  use_half_precision: true
+  optimize_for_inference: true
+
+# Hardware Configuration
+hardware:
+  # GPU settings
+  device: "cuda"
+  gpu_id: 0
+  
+  # Memory management
+  empty_cache_interval: 100
+  
+  # Multi-GPU (if available)
+  distributed:
+    enabled: false
+    backend: "nccl"
+    
+# Baseline Models Configuration
+baselines:
+  # Random Forest baseline
+  random_forest:
+    n_estimators: 500
+    max_depth: 20
+    min_samples_split: 5
+    min_samples_leaf: 2
+    class_weight: "balanced"
+    
+  # SVM baseline
+  svm:
+    C: 1.0
+    kernel: "linear"
+    class_weight: "balanced"
+    k_mer_range: [3, 5]
+    
+  # Logistic Regression baseline
+  logistic_regression:
+    C: 1.0
+    penalty: "l2"
+    class_weight: "balanced"
+    solver: "liblinear"
+
+# Advanced Training Features
+advanced_training:
+  # Hard negative mining
+  hard_negative_mining:
+    enabled: false
+    top_k_percent: 20  # Mine from top 20% hardest negatives
+    update_frequency: 1000  # Update hard negatives every N steps
+    
+  # Auxiliary MLM task
+  auxiliary_mlm:
+    enabled: false
+    weight: 0.1
+    mask_prob: 0.15
+    
+  # Enhanced curriculum learning
+  enhanced_curriculum:
+    enabled: false
+    strategy: "length"  # Options: "length", "difficulty", "combined"
+    initial_fraction: 0.3  # Start with 30% easiest samples
+    increment_fraction: 0.1  # Increase by 10% each stage
+    stage_epochs: 5  # Epochs per curriculum stage
+
+# Path Configuration
+paths:
+  data_dir: "./data"
+  model_dir: "./models"
+  log_dir: "./logs"
+  results_dir: "./results"
+  cache_dir: "./cache"
+  
+# Validation Configuration
+validation:
+  # Biological validation
+  structure_validation:
+    pisa_threshold: 800  # Å² for interface area
+    use_alphafold: true
+    
+  # GO term analysis
+  go_enrichment:
+    target_term: "GO:0042803"  # protein homodimerization
+    p_value_threshold: 0.05

@@ -1,0 +1,223 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+.ENV
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Data and Models
+data/cache/
+data/*.h5
+data/*.hdf5
+*.h5
+*.hdf5
+esm2_features.h5
+features.h5
+models/checkpoints/
+models/baselines/*.pkl
+models/baselines/*.pt
+*.pt
+*.pth
+*.ckpt
+best_model.pt
+checkpoint_*.pt
+
+# Results and Outputs
+results/
+logs/
+wandb/
+outputs/
+*.log
+evaluation_report.txt
+*.png
+*.jpg
+*.pdf
+
+# Temporary Files
+*.tmp
+*.temp
+*_temp.yml
+config_*_temp.yml
+.cache/
+cache/
+tmp/
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Configuration
+config_local.yml
+config_dev.yml
+config_prod.yml
+secrets.yml
+.env.local
+.env.production
+
+# Experiment Tracking
+wandb/
+mlruns/
+tensorboard/
+lightning_logs/
+
+# Test Coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Documentation
+docs/_build/
+docs/_static/
+docs/_templates/
+site/
+
+# Package Management
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+nosetests.xml
+test-results/
+junit/
+
+# Profiling
+*.prof
+*.lprof
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup Files
+*.bak
+*.backup
+*~
+
+# Large Data Files
+*.fasta
+*.fa
+*.fastq
+*.csv
+*.tsv
+*.parquet
+*.feather
+
+# Compressed Files
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# SLURM
+slurm-*.out
+*.sbatch.log
+
+# Singularity/Docker
+*.sif
+*.simg
+Claude.md
+# Custom Ignores for CSPAN
+homodimer_benchmark/
+data/homodimer_benchmark/
+flash_attn_*.egg-info/
+triton/
+apex/
+
+# Benchmark Results
+results/attention_benchmark/
+results/ablations/
+performance_comparison.png
+
+# Temporary Configs
+config_ablation_base.yml
+config_advanced_temp.yml
+
+# Mac Specific
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux Specific
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Windows Specific
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
