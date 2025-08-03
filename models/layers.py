@@ -262,7 +262,11 @@ class GlobalFeatureExtractor(nn.Module):
         x = self.input_proj(x)
         
         # Self-attention
-        if self.flash_attention_available and self.use_flash_attention:
+        # Only use Flash Attention if we're in fp16/bf16 mode or autocast is active
+        use_flash = (self.flash_attention_available and self.use_flash_attention and 
+                    (x.dtype in [torch.float16, torch.bfloat16] or torch.is_autocast_enabled()))
+        
+        if use_flash:
             attn_output = self._flash_attention_forward(x, mask)
         else:
             # Standard attention path
@@ -318,7 +322,10 @@ class GlobalFeatureExtractor(nn.Module):
             x = x.half()
         
         # Project to Q, K, V
+        # Ensure the linear layer output is in the same dtype as input
         qkv = self.qkv_proj(x)
+        if qkv.dtype != x.dtype:
+            qkv = qkv.to(x.dtype)
         qkv = rearrange(qkv, 'b s (three h d) -> b s three h d', 
                        three=3, h=self.num_heads)
         q, k, v = qkv.unbind(dim=2)
@@ -336,6 +343,24 @@ class GlobalFeatureExtractor(nn.Module):
             k = self.rope(k, seq_len=seq_len)
             q = rearrange(q, 'b h s d -> b s h d')
             k = rearrange(k, 'b h s d -> b s h d')
+            
+            # Ensure still in fp16 after RoPE
+            q = q.half() if q.dtype not in [torch.float16, torch.bfloat16] else q
+            k = k.half() if k.dtype not in [torch.float16, torch.bfloat16] else k
+            v = v.half() if v.dtype not in [torch.float16, torch.bfloat16] else v
+        
+        # Final dtype check before Flash Attention
+        q = q.contiguous()
+        k = k.contiguous()
+        v = v.contiguous()
+        
+        # Absolutely ensure fp16 (Flash Attention requirement)
+        if q.dtype not in [torch.float16, torch.bfloat16]:
+            q = q.half()
+        if k.dtype not in [torch.float16, torch.bfloat16]:
+            k = k.half()
+        if v.dtype not in [torch.float16, torch.bfloat16]:
+            v = v.half()
         
         # Flash Attention
         # Note: flash_attn expects (batch, seqlen, nheads, headdim)
@@ -418,8 +443,9 @@ class RotaryPositionEmbedding(nn.Module):
         Returns:
             Tensor with position embeddings applied
         """
-        sin = self.sin[:seq_len, :].unsqueeze(0).unsqueeze(0)
-        cos = self.cos[:seq_len, :].unsqueeze(0).unsqueeze(0)
+        # Get sin/cos in the same dtype as input
+        sin = self.sin[:seq_len, :].unsqueeze(0).unsqueeze(0).to(x.dtype)
+        cos = self.cos[:seq_len, :].unsqueeze(0).unsqueeze(0).to(x.dtype)
         
         # Split x into two halves
         x1, x2 = x[..., :self.dim//2], x[..., self.dim//2:]
