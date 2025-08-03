@@ -61,8 +61,20 @@ class HomodimerDataset(Dataset):
             dataset = self._filter_sequences(dataset)
         
         # Convert to lists for easier access
-        self.sequences = list(dataset['sequence'])
-        self.labels = list(dataset['label'])
+        # Handle different column names in the dataset
+        if 'sequence' in dataset.column_names:
+            self.sequences = list(dataset['sequence'])
+        elif 'seqs' in dataset.column_names:
+            self.sequences = list(dataset['seqs'])
+        else:
+            raise ValueError(f"No sequence column found. Available columns: {dataset.column_names}")
+            
+        if 'label' in dataset.column_names:
+            self.labels = list(dataset['label'])
+        elif 'labels' in dataset.column_names:
+            self.labels = list(dataset['labels'])
+        else:
+            raise ValueError(f"No label column found. Available columns: {dataset.column_names}")
         
         # Calculate class weights if needed
         if self.data_config.get('compute_class_weights', True):
@@ -78,7 +90,8 @@ class HomodimerDataset(Dataset):
             original_size = len(dataset)
         
         def is_valid_sequence(example):
-            seq = example['sequence']
+            # Handle different column names
+            seq = example.get('sequence', example.get('seqs', ''))
             seq_length = len(seq)
             
             # Check length constraints
@@ -130,8 +143,8 @@ class HomodimerDataset(Dataset):
     def __getitem__(self, idx):
         """Get a single sample."""
         return {
-            'sequence': self.sequences[idx],
-            'label': self.labels[idx],
+            'sequence': self.sequences[idx],  # Keep as 'sequence' for consistency
+            'label': self.labels[idx],        # Keep as 'label' for consistency
             'index': idx
         }
     
@@ -171,8 +184,17 @@ class HomodimerDataset(Dataset):
     @staticmethod
     def collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
         """Custom collate function for batching sequences."""
-        sequences = [item['sequence'] for item in batch]
-        labels = torch.tensor([item['label'] for item in batch], dtype=torch.long)
+        # Handle different possible keys in batch
+        if 'sequence' in batch[0]:
+            sequences = [item['sequence'] for item in batch]
+        else:
+            sequences = [item['seqs'] for item in batch]
+            
+        if 'label' in batch[0]:
+            labels = torch.tensor([item['label'] for item in batch], dtype=torch.long)
+        else:
+            labels = torch.tensor([item['labels'] for item in batch], dtype=torch.long)
+            
         indices = torch.tensor([item['index'] for item in batch], dtype=torch.long)
         
         return {
