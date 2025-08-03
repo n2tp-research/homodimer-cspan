@@ -168,7 +168,7 @@ experiment:
   deterministic: true
   
   # Experiment tracking
-  use_wandb: true
+  use_wandb: false
   wandb_project: "homodimer-cspan"
   wandb_entity: null  # Set your wandb entity
   
