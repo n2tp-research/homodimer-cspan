@@ -213,13 +213,84 @@ class AdvancedTrainer(Trainer):
                     continue
                 
                 # Filter batch tensors
-                features = batch['features'][mask].to(self.device)
-                attention_mask = batch['attention_mask'][mask].to(self.device)
+                if batch.get('needs_features', False):
+                    # Extract features for filtered sequences
+                    filtered_sequences = [batch['sequences'][i] for i, m in enumerate(mask) if m]
+                    filtered_indices = [batch['indices'][i].item() for i, m in enumerate(mask) if m]
+                    
+                    with torch.no_grad():
+                        features_list = self.feature_extractor.extract_features(
+                            filtered_sequences,
+                            split='train',
+                            indices=filtered_indices,
+                            use_cache=True,
+                            save_to_cache=True
+                        )
+                        
+                        # Pad features
+                        max_len = max(feat.shape[0] for feat in features_list)
+                        padded_features = []
+                        attention_masks = []
+                        
+                        for feat in features_list:
+                            seq_len = feat.shape[0]
+                            if seq_len < max_len:
+                                padding = np.zeros((max_len - seq_len, feat.shape[1]))
+                                feat = np.concatenate([feat, padding], axis=0)
+                            
+                            padded_features.append(feat)
+                            
+                            attn_mask = np.ones(max_len)
+                            attn_mask[seq_len:] = 0
+                            attention_masks.append(attn_mask)
+                        
+                        features = torch.tensor(np.stack(padded_features), dtype=torch.float32).to(self.device)
+                        attention_mask = torch.tensor(np.stack(attention_masks), dtype=torch.float32).to(self.device)
+                else:
+                    features = batch['features'][mask].to(self.device)
+                    attention_mask = batch['attention_mask'][mask].to(self.device)
+                
                 labels = batch['labels'][mask].to(self.device)
                 indices = batch['indices'][mask]
             else:
-                features = batch['features'].to(self.device)
-                attention_mask = batch['attention_mask'].to(self.device)
+                # No curriculum filtering
+                if batch.get('needs_features', False):
+                    # Extract features in main process
+                    with torch.no_grad():
+                        sequences = batch['sequences']
+                        indices_list = batch['indices'].tolist()
+                        
+                        features_list = self.feature_extractor.extract_features(
+                            sequences,
+                            split='train',
+                            indices=indices_list,
+                            use_cache=True,
+                            save_to_cache=True
+                        )
+                        
+                        # Pad features
+                        max_len = max(feat.shape[0] for feat in features_list)
+                        padded_features = []
+                        attention_masks = []
+                        
+                        for feat in features_list:
+                            seq_len = feat.shape[0]
+                            if seq_len < max_len:
+                                padding = np.zeros((max_len - seq_len, feat.shape[1]))
+                                feat = np.concatenate([feat, padding], axis=0)
+                            
+                            padded_features.append(feat)
+                            
+                            attn_mask = np.ones(max_len)
+                            attn_mask[seq_len:] = 0
+                            attention_masks.append(attn_mask)
+                        
+                        features = torch.tensor(np.stack(padded_features), dtype=torch.float32).to(self.device)
+                        attention_mask = torch.tensor(np.stack(attention_masks), dtype=torch.float32).to(self.device)
+                else:
+                    features = batch['features'].to(self.device)
+                    attention_mask = batch['attention_mask'].to(self.device)
+                
                 labels = batch['labels'].to(self.device)
                 indices = batch['indices']
             

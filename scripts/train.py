@@ -172,9 +172,47 @@ class Trainer:
         pbar = tqdm(self.train_loader, desc=f"Epoch {epoch}")
         
         for batch_idx, batch in enumerate(pbar):
-            # Move batch to device
-            features = batch['features'].to(self.device)
-            attention_mask = batch['attention_mask'].to(self.device)
+            # Check if features need to be extracted
+            if batch.get('needs_features', False):
+                # Extract features in main process
+                with torch.no_grad():
+                    sequences = batch['sequences']
+                    indices = batch['indices'].tolist()
+                    
+                    # Extract features
+                    features_list = self.feature_extractor.extract_features(
+                        sequences,
+                        split='train',
+                        indices=indices,
+                        use_cache=True,
+                        save_to_cache=True
+                    )
+                    
+                    # Pad features
+                    max_len = max(feat.shape[0] for feat in features_list)
+                    padded_features = []
+                    attention_masks = []
+                    
+                    for feat in features_list:
+                        seq_len = feat.shape[0]
+                        if seq_len < max_len:
+                            padding = np.zeros((max_len - seq_len, feat.shape[1]))
+                            feat = np.concatenate([feat, padding], axis=0)
+                        
+                        padded_features.append(feat)
+                        
+                        mask = np.ones(max_len)
+                        mask[seq_len:] = 0
+                        attention_masks.append(mask)
+                    
+                    # Convert to tensors
+                    features = torch.tensor(np.stack(padded_features), dtype=torch.float32).to(self.device)
+                    attention_mask = torch.tensor(np.stack(attention_masks), dtype=torch.float32).to(self.device)
+            else:
+                # Features already extracted
+                features = batch['features'].to(self.device)
+                attention_mask = batch['attention_mask'].to(self.device)
+            
             labels = batch['labels'].to(self.device)
             
             # Forward pass with mixed precision
@@ -279,9 +317,46 @@ class Trainer:
         total_loss = 0
         
         for batch in tqdm(loader, desc=f"Validating ({split})"):
-            # Move batch to device
-            features = batch['features'].to(self.device)
-            attention_mask = batch['attention_mask'].to(self.device)
+            # Check if features need to be extracted
+            if batch.get('needs_features', False):
+                # Extract features in main process
+                sequences = batch['sequences']
+                indices = batch['indices'].tolist()
+                
+                # Extract features
+                features_list = self.feature_extractor.extract_features(
+                    sequences,
+                    split=split if split != 'val' else 'valid',
+                    indices=indices,
+                    use_cache=True,
+                    save_to_cache=False
+                )
+                
+                # Pad features
+                max_len = max(feat.shape[0] for feat in features_list)
+                padded_features = []
+                attention_masks = []
+                
+                for feat in features_list:
+                    seq_len = feat.shape[0]
+                    if seq_len < max_len:
+                        padding = np.zeros((max_len - seq_len, feat.shape[1]))
+                        feat = np.concatenate([feat, padding], axis=0)
+                    
+                    padded_features.append(feat)
+                    
+                    mask = np.ones(max_len)
+                    mask[seq_len:] = 0
+                    attention_masks.append(mask)
+                
+                # Convert to tensors
+                features = torch.tensor(np.stack(padded_features), dtype=torch.float32).to(self.device)
+                attention_mask = torch.tensor(np.stack(attention_masks), dtype=torch.float32).to(self.device)
+            else:
+                # Features already extracted
+                features = batch['features'].to(self.device)
+                attention_mask = batch['attention_mask'].to(self.device)
+            
             labels = batch['labels'].to(self.device)
             
             # Forward pass
