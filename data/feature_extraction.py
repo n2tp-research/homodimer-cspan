@@ -318,18 +318,21 @@ class ESM2FeatureExtractor:
         Returns:
             Collate function for DataLoader
         """
+        # Create a simple collate function that doesn't use CUDA
+        # Features will be extracted in the main process
         def collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
             sequences = [item['sequence'] for item in batch]
             labels = torch.tensor([item['label'] for item in batch], dtype=torch.long)
             indices = [item['index'] for item in batch]
             
-            # Extract features (from cache if available)
-            features = self.extract_features(
-                sequences,
-                indices=indices,
-                use_cache=True,
-                save_to_cache=False  # Don't save during training
-            )
+            # Don't extract features here if using multiple workers
+            # Return sequences to be processed in main thread
+            return {
+                'sequences': sequences,
+                'labels': labels,
+                'indices': torch.tensor(indices, dtype=torch.long),
+                'needs_features': True
+            }
             
             # Pad features to same length
             max_len = max(feat.shape[0] for feat in features)
