@@ -120,7 +120,7 @@ data:
   # Dataloader settings
   num_workers: 0  # Set to 0 to avoid CUDA multiprocessing issues
   pin_memory: true
-  prefetch_factor: 2
+  prefetch_factor: null  # Must be null when num_workers=0
   persistent_workers: false  # Must be false when num_workers=0
   
   # Class weights (computed from dataset or specified)

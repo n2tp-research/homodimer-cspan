@@ -167,9 +167,15 @@ class HomodimerDataset(Dataset):
         # Default DataLoader settings from config
         loader_kwargs = {
             'pin_memory': self.data_config.get('pin_memory', True),
-            'prefetch_factor': self.data_config.get('prefetch_factor', 2),
             'persistent_workers': self.data_config.get('persistent_workers', True) and num_workers > 0
         }
+        
+        # Only add prefetch_factor if num_workers > 0
+        if num_workers > 0:
+            prefetch_factor = self.data_config.get('prefetch_factor', 2)
+            if prefetch_factor is not None:
+                loader_kwargs['prefetch_factor'] = prefetch_factor
+                
         loader_kwargs.update(kwargs)
         
         return DataLoader(
