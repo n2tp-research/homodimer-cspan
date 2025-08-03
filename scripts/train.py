@@ -5,8 +5,7 @@ Training script for CSPAN homodimerization prediction model.
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import GradScaler
-from torch.amp import autocast
+from torch.amp import GradScaler, autocast
 import numpy as np
 from tqdm import tqdm
 import yaml
@@ -154,7 +153,7 @@ class Trainer:
         # Mixed precision training
         self.use_amp = train_config['use_amp'] and self.device.type == 'cuda'
         if self.use_amp:
-            self.scaler = GradScaler()
+            self.scaler = GradScaler('cuda')
         
         # Training state
         self.start_epoch = 0

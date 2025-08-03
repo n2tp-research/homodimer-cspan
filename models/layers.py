@@ -271,10 +271,10 @@ class GlobalFeatureExtractor(nn.Module):
         else:
             # Standard attention path
             if mask is not None:
-                # Convert to attention mask format (True = masked)
-                attn_mask = ~mask.bool()
+                # Convert to key padding mask format (True = masked)
+                key_padding_mask = ~mask.bool()
             else:
-                attn_mask = None
+                key_padding_mask = None
             
             # Self-attention with optional RoPE
             if self.use_rope:
@@ -291,10 +291,17 @@ class GlobalFeatureExtractor(nn.Module):
                 q = rearrange(q, 'b h n d -> b n (h d)')
                 k = rearrange(k, 'b h n d -> b n (h d)')
                 
-                # Manual attention computation
+                # Manual attention computation (this expects attention mask, not padding mask)
+                if mask is not None:
+                    # Create attention mask from padding mask
+                    # Shape: (batch, 1, 1, seq_len) -> will broadcast to (batch, heads, seq_len, seq_len)
+                    attn_mask = mask.unsqueeze(1).unsqueeze(2)
+                    attn_mask = (1.0 - attn_mask) * -1e9  # Convert to additive mask
+                else:
+                    attn_mask = None
                 attn_output = self._manual_attention(q, k, v, attn_mask)
             else:
-                attn_output, _ = self.attention(x, x, x, attn_mask=attn_mask)
+                attn_output, _ = self.attention(x, x, x, key_padding_mask=key_padding_mask)
         
         x = self.norm1(x + self.dropout(attn_output))
         
@@ -400,9 +407,9 @@ class GlobalFeatureExtractor(nn.Module):
         # Compute attention scores
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(q.size(-1))
         
-        # Apply mask if provided
+        # Apply mask if provided (expecting additive mask)
         if mask is not None:
-            scores = scores.masked_fill(mask.unsqueeze(1).unsqueeze(1), float('-inf'))
+            scores = scores + mask
         
         # Softmax
         attn_weights = F.softmax(scores, dim=-1)
@@ -536,12 +543,13 @@ class CrossScaleAttention(nn.Module):
         
         # Prepare attention mask
         if mask is not None:
-            attn_mask = ~mask.bool()
+            # Use key_padding_mask for padding mask (batch, seq_len)
+            key_padding_mask = ~mask.bool()
         else:
-            attn_mask = None
+            key_padding_mask = None
         
         # Cross-scale attention
-        attn_output, _ = self.attention(q, k, v, attn_mask=attn_mask)
+        attn_output, _ = self.attention(q, k, v, key_padding_mask=key_padding_mask)
         
         # Residual connection and normalization
         output = self.norm(global_features[:, :, :self.d_model] + self.dropout(attn_output))

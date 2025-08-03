@@ -5,8 +5,7 @@ Advanced training script with curriculum learning, auxiliary MLM, and hard negat
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import GradScaler
-from torch.amp import autocast
+from torch.amp import GradScaler, autocast
 import numpy as np
 from tqdm import tqdm
 import yaml
