@@ -98,7 +98,9 @@ class FastFeatureExtractor:
         sequences_to_process = [dataset.sequences[i] for i in uncached_indices]
         
         # Process in batches
-        pbar = tqdm(total=len(uncached_indices), desc=f"Extracting {split}")
+        num_batches = (len(uncached_indices) + self.batch_size - 1) // self.batch_size
+        pbar = tqdm(total=num_batches, desc=f"Extracting {split} (batches)")
+        seq_pbar = tqdm(total=len(uncached_indices), desc=f"Sequences", position=1, leave=False)
         
         for i in range(0, len(uncached_indices), self.batch_size):
             batch_indices = uncached_indices[i:i+self.batch_size]
@@ -113,7 +115,8 @@ class FastFeatureExtractor:
                     use_cache=False,
                     save_to_cache=True
                 )
-                pbar.update(len(batch_sequences))
+                pbar.update(1)
+                seq_pbar.update(len(batch_sequences))
             except Exception as e:
                 print(f"\nError processing batch: {e}")
                 # Try smaller batch size
@@ -126,12 +129,13 @@ class FastFeatureExtractor:
                             use_cache=False,
                             save_to_cache=True
                         )
-                        pbar.update(1)
+                        seq_pbar.update(1)
                     except:
                         print(f"Skipping sequence {batch_indices[j]}")
-                        pbar.update(1)
+                        seq_pbar.update(1)
         
         pbar.close()
+        seq_pbar.close()
         print(f"Completed {split} split!")
 
 
