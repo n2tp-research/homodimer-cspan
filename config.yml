@@ -42,9 +42,9 @@ model:
 # Training Configuration
 training:
   # Batch settings
-  batch_size: 16
+  batch_size: 64
   gradient_accumulation_steps: 4
-  effective_batch_size: 64  # batch_size * accumulation_steps
+  effective_batch_size: 256  # batch_size * accumulation_steps
   
   # Optimizer
   optimizer: "AdamW"
